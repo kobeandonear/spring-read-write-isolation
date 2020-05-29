@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (C) 2015 jd, Inc. All Rights Reserved.
+  -->
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns="http://www.springframework.org/schema/beans"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop
+	   http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/task
+       http://www.springframework.org/schema/task/spring-task-4.0.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+
+    <!-- spring 实体对象管理,不依赖mvc,便于单测 -->
+
+    <!-- 属性文件读入 -->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:demo/conf/jdbc.properties</value>
+            </list>
+        </property>
+        <property name="fileEncoding" value="UTF-8"></property>
+    </bean>
+
+    <!-- 这里指定为CGLIB模式 -->
+    <aop:aspectj-autoproxy proxy-target-class="true"/>
+    <task:executor id="executor" pool-size="5" />
+    <task:scheduler id="scheduler" pool-size="5" />
+    <task:annotation-driven executor="executor" scheduler="scheduler" />
+
+    <!-- 忽略Configuration标注 -->
+    <context:component-scan base-package="com.gdw.database">
+        <context:exclude-filter type="annotation" expression="org.springframework.context.annotation.Configuration"/>
+    </context:component-scan>
+    <bean id="masterDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 基本属性 url、user、password -->
+        <property name="url" value="${jdbc.master.url}" />
+        <property name="username" value="${jdbc.master.user}" />
+        <property name="password" value="${jdbc.master.password}" />
+
+        <!-- 配置初始化大小、最小、最大 -->
+        <property name="initialSize" value="10" />
+        <property name="minIdle" value="10" />
+        <property name="maxActive" value="50" />
+
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="60000" />
+
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="60000" />
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="300000" />
+
+        <property name="validationQuery" value="SELECT 'x'" />
+        <property name="testWhileIdle" value="true" />
+        <property name="testOnBorrow" value="false" />
+        <property name="testOnReturn" value="false" />
+
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+        <property name="poolPreparedStatements" value="false" />
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="20" />
+
+        <!-- 配置监控统计拦截的filters 如stat,log4j2...-->
+        <property name="filters" value="mergeStat" />
+
+        <property name="connectionProperties" value="druid.stat.slowSqlMillis=3000" />
+
+        <property name="resetStatEnable" value="true" />
+
+        <!-- 数据库链接泄露检查 -->
+        <!--property name="removeAbandoned" value="true" /-->
+        <!--property name="removeAbandonedTimeout" value="1800" /-->
+        <!--property name="logAbandoned" value="true" /-->
+    </bean>
+
+    <bean id="slaveDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 基本属性 url、user、password -->
+        <property name="url" value="${jdbc.slave.url}" />
+        <property name="username" value="${jdbc.slave.user}" />
+        <property name="password" value="${jdbc.slave.password}" />
+
+        <!-- 配置初始化大小、最小、最大 -->
+        <property name="initialSize" value="10" />
+        <property name="minIdle" value="10" />
+        <property name="maxActive" value="50" />
+
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="60000" />
+
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="60000" />
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="300000" />
+
+        <property name="validationQuery" value="SELECT 'x'" />
+        <property name="testWhileIdle" value="true" />
+        <property name="testOnBorrow" value="false" />
+        <property name="testOnReturn" value="false" />
+
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+        <property name="poolPreparedStatements" value="false" />
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="20" />
+
+        <!-- 配置监控统计拦截的filters 如stat,log4j2...-->
+        <property name="filters" value="mergeStat" />
+
+        <property name="connectionProperties" value="druid.stat.slowSqlMillis=3000" />
+
+        <property name="resetStatEnable" value="true" />
+
+        <!-- 数据库链接泄露检查 -->
+        <!--property name="removeAbandoned" value="true" /-->
+        <!--property name="removeAbandonedTimeout" value="1800" /-->
+        <!--property name="logAbandoned" value="true" /-->
+    </bean>
+
+    <bean id="dataSource" class="com.gdw.database.isolation.DataSourceSelector" lazy-init="true">
+        <description>数据源</description>
+        <property name="targetDataSources">
+            <map key-type="java.lang.String" value-type="javax.sql.DataSource">
+                <entry key="mainDataSource" value-ref="masterDataSource"/>
+                <entry key="slaveDataSource" value-ref="slaveDataSource"/>
+            </map>
+        </property>
+        <property name="defaultDataSource" value="masterDataSource"/>
+        <!-- 设置默认的目标数据源 -->
+        <property name="defaultTargetDataSource" ref="masterDataSource"/>
+    </bean>
+
+    <bean id="druid-stat-interceptor"
+          class="com.alibaba.druid.support.spring.stat.DruidStatInterceptor">
+    </bean>
+
+    <bean id="druid-stat-pointcut" class="org.springframework.aop.support.JdkRegexpMethodPointcut"
+          scope="prototype">
+        <property name="patterns">
+            <list>
+                <value>com.jcloud.ddos.ipanti.controller.service.*</value>
+            </list>
+        </property>
+    </bean>
+
+    <aop:config proxy-target-class="true">
+        <aop:advisor advice-ref="druid-stat-interceptor" pointcut-ref="druid-stat-pointcut" />
+    </aop:config>
+
+    <!--JDBC事务管理器 -->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 用注解来实现事务管理 -->
+    <tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true"/>
+
+    <!-- spring和MyBatis完美整合，不需要mybatis的配置映射文件 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <!-- 自动扫描mapping.xml文件 -->
+        <property name="mapperLocations" value="classpath*:demo/mybatis/mapper/**/*.xml"/>
+    </bean>
+
+    <!-- DAO接口所在包名，Spring会自动查找其下的类 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.gdw.database.demo.dao" />
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+</beans>

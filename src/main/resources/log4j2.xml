@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration status="debug" monitorInterval="30">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <RegexFilter regex=".* SELECT 1 .*" onMatch="DENY" onMismatch="NEUTRAL"/>
+            <PatternLayout pattern="%-d{yyyy-MM-dd HH:mm:ss.SSS} [%r] [%p] [%t] [%C:%M(%L)] %X{traceId} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <asyncRoot level="info" includeLocation="true">
+            <AppenderRef ref="Console"/>
+        </asyncRoot>
+        <!-- 关闭以下日志 -->
+        <Logger name="springfox" additivity="false">
+        </Logger>
+        <Logger name="org.apache.logging.log4j" additivity="false">
+        </Logger>
+        <Logger name="org.apache.http" additivity="false">
+        </Logger>
+        <Logger name="org.eclipse.jetty" additivity="false">
+        </Logger>
+
+        <Logger name="org.mybatis" level="debug" additivity="false">
+        </Logger>
+        <Logger name="org.springframework" level="trace" additivity="false">
+        </Logger>
+        <Logger name="org.hibernate.validator" level="trace" additivity="false">
+        </Logger>
+    </Loggers>
+</Configuration>
